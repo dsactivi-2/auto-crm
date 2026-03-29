@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { createClient } from "@supabase/supabase-js";
 import { createLogger } from "@/lib/logger";
+import { adminLimiter } from "@/lib/rate-limit";
 
 const log = createLogger("api/admin");
+
+/** Prüft Passwort-Komplexität: min 8 Zeichen, 1 Großbuchstabe, 1 Zahl */
+function isStrongPassword(pw: string): boolean {
+  return pw.length >= 8 && /[A-Z]/.test(pw) && /[0-9]/.test(pw);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +19,15 @@ export async function POST(request: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+    }
+
+    // Rate Limiting
+    const rateCheck = adminLimiter.check(session.user.id);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(rateCheck.resetIn / 1000)) } }
+      );
     }
 
     const { data: profile } = await supabase
@@ -25,7 +40,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nur Admins dürfen User erstellen" }, { status: 403 });
     }
 
-    const { email, password, fullName, role } = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Ungültiger Request-Body" }, { status: 400 });
+    }
+    const { email, password, fullName, role } = body;
 
     if (!email || !password) {
       return NextResponse.json({ error: "E-Mail und Passwort erforderlich" }, { status: 400 });
@@ -36,8 +55,11 @@ export async function POST(request: NextRequest) {
     if (!emailRegex.test(email)) {
       return NextResponse.json({ error: "Ungültige E-Mail-Adresse" }, { status: 400 });
     }
-    if (typeof password !== "string" || password.trim().length < 6) {
-      return NextResponse.json({ error: "Passwort muss mindestens 6 Zeichen lang sein" }, { status: 400 });
+    if (typeof password !== "string" || !isStrongPassword(password)) {
+      return NextResponse.json(
+        { error: "Passwort muss mindestens 8 Zeichen, 1 Großbuchstaben und 1 Zahl enthalten" },
+        { status: 400 }
+      );
     }
     if (role && !["user", "admin"].includes(role)) {
       return NextResponse.json({ error: "Rolle muss 'user' oder 'admin' sein" }, { status: 400 });

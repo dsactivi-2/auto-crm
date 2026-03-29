@@ -37,6 +37,7 @@ let lastCheckTime = 0;
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 Stunden
 const REMOTE_CHECK_INTERVAL_MS = 1 * 60 * 60 * 1000; // 1 Stunde für Remote
 let lastRemoteCheckTime = 0;
+let validationInProgress: Promise<LicenseStatus> | null = null;
 
 // ── Secret für HMAC-Signatur ─────────────────────────────
 function getSecret(): string {
@@ -152,7 +153,7 @@ async function checkRemoteLicense(payload: LicensePayload): Promise<"ok" | "revo
   }
 }
 
-// ── Hauptfunktion: Lizenz prüfen (mit Cache) ─────────────
+// ── Hauptfunktion: Lizenz prüfen (mit Cache + Mutex) ─────
 export async function validateLicense(): Promise<LicenseStatus> {
   const now = Date.now();
 
@@ -165,6 +166,20 @@ export async function validateLicense(): Promise<LicenseStatus> {
     return cachedStatus;
   }
 
+  // Race-Condition vermeiden: Bei parallelen Requests nur einmal validieren
+  if (validationInProgress) {
+    return validationInProgress;
+  }
+
+  validationInProgress = doValidateLicense(now);
+  try {
+    return await validationInProgress;
+  } finally {
+    validationInProgress = null;
+  }
+}
+
+async function doValidateLicense(now: number): Promise<LicenseStatus> {
   const key = process.env.LICENSE_KEY;
   if (!key) {
     cachedStatus = {

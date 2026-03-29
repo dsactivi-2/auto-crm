@@ -22,11 +22,14 @@ export default function DashboardStats({ userId }: DashboardStatsProps) {
   const supabase = createClient();
 
   useEffect(() => {
-    loadStats();
+    let cancelled = false;
+    loadStats(cancelled);
+    return () => { cancelled = true; };
+    // userId ist die einzige äußere Abhängigkeit — absichtlich begrenzt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  async function loadStats() {
+  async function loadStats(cancelled = false) {
     try {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -67,16 +70,18 @@ export default function DashboardStats({ userId }: DashboardStatsProps) {
       });
     }
 
-    setStats({
-      today: todayActivities.length,
-      week: weekActivities.length,
-      total: activities.length,
-      byModule,
-      byStatus,
-      hourly,
-    });
+    if (!cancelled) {
+      setStats({
+        today: todayActivities.length,
+        week: weekActivities.length,
+        total: activities.length,
+        byModule,
+        byStatus,
+        hourly,
+      });
+    }
     } catch {
-      setError(true);
+      if (!cancelled) setError(true);
     }
   }
 

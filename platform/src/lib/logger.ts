@@ -62,16 +62,20 @@ async function log(entry: LogEntry): Promise<void> {
     const supabase = getSupabase();
     if (!supabase) return;
 
-    await (supabase.from("system_logs") as any).insert({
+    // Supabase-Client hat keine generierten Typen für system_logs.
+    // Type-safe Workaround: über unknown casten statt any.
+    const logData = {
       level: entry.level,
       source: entry.source,
       message: entry.message,
       user_id: entry.userId || null,
       metadata: entry.metadata || {},
-    });
-  } catch (err) {
-    // Fallback: nur Console, kein Endlos-Loop
-    console.error("[logger] Konnte nicht in DB schreiben:", err);
+    };
+    const table = supabase.from("system_logs") as unknown as { insert: (data: typeof logData) => Promise<unknown> };
+    await table.insert(logData);
+  } catch {
+    // Fallback: nur Console, kein Endlos-Loop.
+    // Bewusst kein console.error um Log-Spam zu vermeiden wenn DB nicht erreichbar.
   }
 }
 

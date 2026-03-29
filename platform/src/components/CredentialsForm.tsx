@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase-browser";
 
+const DEFAULT_CRM_URL = "https://crm.job-step.com";
+
 const AVAILABLE_MODELS = [
   { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", desc: "Schnell & günstig — ideal für CRM-Aufgaben" },
   { id: "claude-opus-4-20250514", name: "Claude Opus 4", desc: "Stärkstes Modell — komplexe Analysen" },
@@ -12,7 +14,7 @@ const AVAILABLE_MODELS = [
 export default function CredentialsForm({ userId }: { userId: string }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [crmUrl, setCrmUrl] = useState("https://crm.job-step.com");
+  const [crmUrl, setCrmUrl] = useState(DEFAULT_CRM_URL);
   const [anthropicKey, setAnthropicKey] = useState("");
   const [preferredModel, setPreferredModel] = useState("claude-haiku-4-5-20251001");
   const [hasCredentials, setHasCredentials] = useState(false);
@@ -23,17 +25,20 @@ export default function CredentialsForm({ userId }: { userId: string }) {
   const supabase = createClient();
 
   useEffect(() => {
-    loadCredentials();
-  }, []);
+    let cancelled = false;
+    loadCredentials(cancelled);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
-  async function loadCredentials() {
+  async function loadCredentials(cancelled = false) {
     const { data } = await supabase
       .from("crm_credentials")
       .select("crm_username, crm_url, is_valid, anthropic_api_key_encrypted, preferred_model")
       .eq("user_id", userId)
       .single();
 
-    if (data) {
+    if (data && !cancelled) {
       setUsername(data.crm_username);
       setCrmUrl(data.crm_url);
       setIsValid(data.is_valid);
@@ -126,7 +131,7 @@ export default function CredentialsForm({ userId }: { userId: string }) {
           {/* Anthropic API Key */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <label className="text-xs font-medium text-gray-600">Anthropic API Key</label>
+              <label htmlFor="anthropic-key" className="text-xs font-medium text-gray-600">Anthropic API Key</label>
               {hasAnthropicKey && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
                   Gespeichert
@@ -134,6 +139,7 @@ export default function CredentialsForm({ userId }: { userId: string }) {
               )}
             </div>
             <input
+              id="anthropic-key"
               type="password"
               value={anthropicKey}
               onChange={(e) => setAnthropicKey(e.target.value)}
@@ -150,8 +156,9 @@ export default function CredentialsForm({ userId }: { userId: string }) {
 
           {/* Modell-Auswahl */}
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">KI-Modell</label>
+            <label htmlFor="preferred-model" className="text-xs font-medium text-gray-600 block mb-1">KI-Modell</label>
             <select
+              id="preferred-model"
               value={preferredModel}
               onChange={(e) => setPreferredModel(e.target.value)}
               className="input-field text-sm w-full"

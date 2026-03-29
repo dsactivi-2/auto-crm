@@ -19,17 +19,17 @@ export function encrypt(text: string): string {
 
 export function decrypt(encryptedText: string): string {
   if (!encryptedText || typeof encryptedText !== "string") {
-    throw new Error("Encrypted text is required");
+    throw new Error("Verschlüsselter Text erforderlich");
   }
 
   const parts = encryptedText.split(":");
   if (parts.length !== 3) {
-    throw new Error("Invalid encrypted text format (expected iv:authTag:encrypted)");
+    throw new Error("Ungültiges verschlüsseltes Format (erwartet: iv:authTag:encrypted)");
   }
 
   const [ivHex, authTagHex, encrypted] = parts;
   if (!ivHex || !authTagHex || !encrypted) {
-    throw new Error("Invalid encrypted text: empty segments");
+    throw new Error("Ungültiger verschlüsselter Text: leere Segmente");
   }
 
   const decipher = createDecipheriv(ALGORITHM, getKey(), Buffer.from(ivHex, "hex"));

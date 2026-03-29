@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { encrypt } from "@/lib/encryption";
 import { createLogger } from "@/lib/logger";
+import { credentialsLimiter } from "@/lib/rate-limit";
 
 const log = createLogger("api/credentials");
+
+const DEFAULT_CRM_URL = "https://crm.job-step.com";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +17,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
     }
 
-    const { username, password, crmUrl, anthropicApiKey, preferredModel } = await request.json();
+    // Rate Limiting
+    const rateCheck = credentialsLimiter.check(session.user.id);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(rateCheck.resetIn / 1000)) } }
+      );
+    }
+
+    // CSRF-Schutz
+    const origin = request.headers.get("origin");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (origin && appUrl && !origin.startsWith(appUrl)) {
+      return NextResponse.json({ error: "Ungültige Anfrage-Herkunft" }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Ungültiger Request-Body" }, { status: 400 });
+    }
+    const { username, password, crmUrl, anthropicApiKey, preferredModel } = body;
 
     if (!username) {
       return NextResponse.json({ error: "Benutzername erforderlich" }, { status: 400 });
@@ -32,7 +55,7 @@ export async function POST(request: NextRequest) {
     const upsertData: Record<string, unknown> = {
       user_id: session.user.id,
       crm_username: username,
-      crm_url: crmUrl || "https://crm.job-step.com",
+      crm_url: crmUrl || DEFAULT_CRM_URL,
       is_valid: null, // Reset validation
     };
 

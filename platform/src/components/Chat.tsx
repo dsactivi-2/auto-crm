@@ -129,8 +129,9 @@ export default function Chat({ userId, initialMessages }: ChatProps) {
             className="input-field flex-1"
             placeholder="Was soll ich im CRM tun?"
             disabled={loading}
+            aria-label="CRM-Nachricht eingeben"
           />
-          <button type="submit" className="btn-primary" disabled={loading || !input.trim()}>
+          <button type="submit" className="btn-primary" disabled={loading || !input.trim()} aria-label="Nachricht senden">
             Senden
           </button>
         </div>
