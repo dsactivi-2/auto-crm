@@ -21,7 +21,9 @@ export default function CredentialsForm({ userId }: { userId: string }) {
   const [hasAnthropicKey, setHasAnthropicKey] = useState(false);
   const [isValid, setIsValid] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState("");
+  const [testResult, setTestResult] = useState<{ success: boolean; text: string } | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -81,6 +83,40 @@ export default function CredentialsForm({ userId }: { userId: string }) {
       setMessage(`Fehler: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleTestLogin() {
+    setTesting(true);
+    setTestResult(null);
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/credentials/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          // Wenn neue Credentials eingegeben, diese direkt testen
+          password ? { username, password } : {}
+        ),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setTestResult({ success: true, text: data.message || "Login erfolgreich!" });
+        setIsValid(true);
+      } else {
+        setTestResult({ success: false, text: data.error || "Login fehlgeschlagen." });
+        setIsValid(false);
+      }
+    } catch (err: unknown) {
+      setTestResult({
+        success: false,
+        text: err instanceof Error ? err.message : "Verbindungsfehler",
+      });
+    } finally {
+      setTesting(false);
     }
   }
 
@@ -181,9 +217,31 @@ export default function CredentialsForm({ userId }: { userId: string }) {
           </p>
         )}
 
-        <button type="submit" className="btn-primary text-sm w-full" disabled={saving}>
-          {saving ? "Speichern..." : "Zugangsdaten speichern"}
-        </button>
+        <div className="flex gap-2">
+          <button type="submit" className="btn-primary text-sm flex-1" disabled={saving || testing}>
+            {saving ? "Speichern..." : "Zugangsdaten speichern"}
+          </button>
+          {hasCredentials && (
+            <button
+              type="button"
+              onClick={handleTestLogin}
+              disabled={testing || saving}
+              className="text-sm px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {testing ? "Teste..." : "Test Login"}
+            </button>
+          )}
+        </div>
+
+        {testResult && (
+          <div className={`text-xs p-3 rounded-lg ${
+            testResult.success
+              ? "bg-green-50 text-green-700 border border-green-200"
+              : "bg-red-50 text-red-600 border border-red-200"
+          }`}>
+            {testResult.success ? "\u2705 " : "\u274c "}{testResult.text}
+          </div>
+        )}
       </form>
     </div>
   );
