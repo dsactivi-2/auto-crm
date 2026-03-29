@@ -1,0 +1,17 @@
+node_modules
+.next
+.env
+.env.local
+.env.production
+*.log
+.git
+.gitignore
+README.md
+preview.html
+playwright/node_modules
+playwright/data
+docker-compose.yml
+start.bat
+stop.bat
+supabase/
+docs/

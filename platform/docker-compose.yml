@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  # ── Next.js App ──────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    container_name: crm-app
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - PLAYWRIGHT_SERVICE_URL=http://playwright:3001
+    restart: unless-stopped
+    depends_on:
+      playwright:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ── Playwright CRM-Automation Service ───────────────────
+  playwright:
+    build:
+      context: ./playwright
+      dockerfile: Dockerfile
+    container_name: crm-playwright
+    environment:
+      - CRM_URL=${CRM_URL:-https://crm.job-step.com}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    volumes:
+      - playwright-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+volumes:
+  playwright-data:

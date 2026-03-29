@@ -1,6 +1,5 @@
+config/.env
 node_modules/
-dist/
-logs/
-data/
-*.log
+__pycache__/
+*.pyc
 .env

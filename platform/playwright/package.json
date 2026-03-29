@@ -1,0 +1,12 @@
+{
+  "name": "crm-playwright-service",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "playwright": "^1.44.0"
+  }
+}
