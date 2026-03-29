@@ -64,8 +64,10 @@ export async function POST(request: NextRequest) {
 
     // Login testen via Playwright
     const result = await pw.crmValidate(session.user.id, username!, password!);
+    // Note: /validate endpoint returns { valid: boolean }, not { success: boolean }
+    const loginOk = !!(result.success || (result as Record<string, unknown>).valid);
 
-    if (result.success) {
+    if (loginOk) {
       // Credentials als gültig markieren
       await supabase
         .from("crm_credentials")
@@ -83,7 +85,6 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ success: true, message: "Login erfolgreich! Zugangsdaten sind gültig." });
     } else {
-      // Credentials als ungültig markieren
       await supabase
         .from("crm_credentials")
         .update({ is_valid: false, last_validated_at: new Date().toISOString() })

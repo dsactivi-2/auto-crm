@@ -451,6 +451,13 @@ setInterval(cleanupIdleSessions, 5 * 60 * 1000);
 /**
  * Session-Metriken für Health-Check
  */
+/**
+ * Prüfen ob User eine aktive (bereits eingeloggte) Session hat
+ */
+function hasActiveSession(userId) {
+  return sessions.has(userId);
+}
+
 function getMetrics() {
   return {
     activeSessions: sessions.size,
@@ -501,6 +508,7 @@ module.exports = {
   getSession,
   login,
   isLoggedIn,
+  hasActiveSession,
   navigate,
   clickButton,
   fillForm,

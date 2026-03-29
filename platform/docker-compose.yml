@@ -57,5 +57,68 @@ services:
         limits:
           memory: 2G
 
+  # ── Activepieces Plugin-Framework ───────────────────────
+  # Öffne http://localhost:8080 um Automations zu erstellen
+  # Deaktiviere diesen Service wenn nicht benötigt:
+  #   docker compose up app playwright
+  activepieces:
+    image: activepieces/activepieces:latest
+    container_name: crm-activepieces
+    ports:
+      - "8080:80"
+    depends_on:
+      - ap-postgres
+      - ap-redis
+    environment:
+      - AP_ENGINE_EXECUTABLE_PATH=dist/packages/engine/main.js
+      - AP_API_KEY=${AP_API_KEY:-change-me-in-env}
+      - AP_ENCRYPTION_KEY=${AP_ENCRYPTION_KEY:-a-32-char-secret-change-me-now!}
+      - AP_JWT_SECRET=${AP_JWT_SECRET:-another-jwt-secret-change-me!}
+      - AP_FRONTEND_URL=${AP_FRONTEND_URL:-http://localhost:8080}
+      - AP_POSTGRES_DATABASE=activepieces
+      - AP_POSTGRES_HOST=ap-postgres
+      - AP_POSTGRES_PORT=5432
+      - AP_POSTGRES_USERNAME=activepieces
+      - AP_POSTGRES_PASSWORD=${AP_POSTGRES_PASSWORD:-activepieces-db-pass}
+      - AP_REDIS_URL=redis://ap-redis:6379
+      - AP_TELEMETRY_ENABLED=false
+      - AP_EXECUTION_MODE=UNSANDBOXED
+    restart: unless-stopped
+    profiles:
+      - plugins
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  ap-postgres:
+    image: postgres:16-alpine
+    container_name: crm-ap-postgres
+    environment:
+      - POSTGRES_DB=activepieces
+      - POSTGRES_USER=activepieces
+      - POSTGRES_PASSWORD=${AP_POSTGRES_PASSWORD:-activepieces-db-pass}
+    volumes:
+      - ap-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    profiles:
+      - plugins
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  ap-redis:
+    image: redis:7-alpine
+    container_name: crm-ap-redis
+    restart: unless-stopped
+    profiles:
+      - plugins
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
 volumes:
   playwright-data:
+  ap-postgres-data:

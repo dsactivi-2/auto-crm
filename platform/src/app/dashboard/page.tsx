@@ -8,13 +8,15 @@ import Chat from "@/components/Chat";
 import ActivityLog from "@/components/ActivityLog";
 import CredentialsForm from "@/components/CredentialsForm";
 import DashboardStats from "@/components/DashboardStats";
+import CrawlerPanel from "@/components/CrawlerPanel";
+import LiveDemoPanel from "@/components/LiveDemoPanel";
 import type { Profile, ChatMessage } from "@/lib/types";
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"chat" | "stats">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "stats" | "crawler" | "live">("chat");
   const router = useRouter();
   const supabase = createClient();
 
@@ -61,7 +63,7 @@ export default function DashboardPage() {
         {/* Linke Spalte: Chat oder Stats */}
         <div className="flex-1 card flex flex-col min-h-[calc(100vh-8rem)]">
           {/* Tabs */}
-          <div className="flex items-center gap-1 mb-2 pb-2 border-b border-gray-100">
+          <div className="flex items-center gap-1 mb-2 pb-2 border-b border-gray-100 flex-wrap">
             <button
               onClick={() => setActiveTab("chat")}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -79,6 +81,23 @@ export default function DashboardPage() {
             >
               Statistiken
             </button>
+            <button
+              onClick={() => setActiveTab("live")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                activeTab === "live" ? "bg-primary-50 text-primary-700" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+              Live
+            </button>
+            <button
+              onClick={() => setActiveTab("crawler")}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                activeTab === "crawler" ? "bg-primary-50 text-primary-700" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              🔍 Crawler
+            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -88,6 +107,16 @@ export default function DashboardPage() {
             {activeTab === "stats" && profile && (
               <div className="p-2">
                 <DashboardStats userId={profile.id} />
+              </div>
+            )}
+            {activeTab === "live" && (
+              <div className="p-2">
+                <LiveDemoPanel />
+              </div>
+            )}
+            {activeTab === "crawler" && (
+              <div className="p-2">
+                <CrawlerPanel />
               </div>
             )}
           </div>

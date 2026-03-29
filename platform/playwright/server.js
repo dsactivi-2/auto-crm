@@ -19,6 +19,8 @@
 
 const http = require("http");
 const crm = require("./crm-browser");
+const { popupHandler } = require("./popup-handler");
+const { uploadBase64File, waitForDownload } = require("./file-upload-handler");
 const { createLogger } = require("./logger");
 
 const log = createLogger("playwright-server");
@@ -248,6 +250,66 @@ const server = http.createServer(async (req, res) => {
     if (req.url === "/logout") {
       await crm.closeSession(userId);
       return json(res, 200, { success: true });
+    }
+
+    // ── Popup schließen ──
+    if (req.url === "/popup-dismiss") {
+      const session = await crm.getSession(userId);
+      const { preferAction = "accept" } = body;
+      const count = await popupHandler.closeHtmlDialogs(session.page, preferAction);
+      return json(res, 200, { success: true, dialogs_closed: count, duration_ms: Date.now() - startTime });
+    }
+
+    // ── Datei hochladen ──
+    if (req.url === "/upload") {
+      const { selector, base64Content, filename } = body;
+      if (!selector || !base64Content || !filename) {
+        return json(res, 400, { error: "selector, base64Content und filename erforderlich" });
+      }
+      const session = await crm.getSession(userId);
+      const result = await uploadBase64File(session.page, selector, base64Content, filename);
+      return json(res, 200, { ...result, duration_ms: Date.now() - startTime });
+    }
+
+    // ── Crawl — CRM-Struktur scannen ──
+    if (req.url === "/crawl") {
+      const { crmUrl } = body;
+
+      // Sicherstellen, dass User eingeloggt ist
+      const sessionOk = await crm.hasActiveSession(userId);
+      if (!sessionOk) {
+        return json(res, 400, { error: "Kein aktiver Login. Bitte zuerst einloggen." });
+      }
+
+      const targetUrl = crmUrl || process.env.CRM_URL || "https://crm.job-step.com";
+      const modules = {};
+      const errors = [];
+
+      // Alle bekannten Module scannen
+      for (const [name, path] of Object.entries(MODULE_PATHS)) {
+        try {
+          const navResult = await crm.navigate(userId, path);
+          modules[name] = {
+            path,
+            title: navResult.title || name,
+            text_preview: (navResult.text || "").slice(0, 300),
+            accessible: navResult.success !== false,
+          };
+        } catch (e) {
+          errors.push({ module: name, error: e.message });
+          modules[name] = { path, accessible: false, error: e.message };
+        }
+      }
+
+      return json(res, 200, {
+        success: true,
+        scanned_at: new Date().toISOString(),
+        base_url: targetUrl,
+        modules_found: Object.keys(modules).length,
+        modules,
+        errors,
+        duration_ms: Date.now() - startTime,
+      });
     }
 
     return json(res, 404, { error: "Endpoint nicht gefunden" });

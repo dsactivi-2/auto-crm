@@ -6,6 +6,7 @@ const PLAYWRIGHT_URL = process.env.PLAYWRIGHT_SERVICE_URL || "http://playwright:
 
 interface PlaywrightResponse {
   success?: boolean;
+  valid?: boolean;
   url?: string;
   title?: string;
   text?: string;
@@ -15,6 +16,16 @@ interface PlaywrightResponse {
   screenshot?: string;
   error?: string;
   duration_ms?: number;
+  // Crawl-specific
+  scanned_at?: string;
+  base_url?: string;
+  modules_found?: number;
+  modules?: Record<string, unknown>;
+  errors?: Array<{ module: string; error: string }>;
+  // Upload
+  file?: string;
+  // Popup
+  dialogs_closed?: number;
 }
 
 async function callService(endpoint: string, body: Record<string, unknown>): Promise<PlaywrightResponse> {
@@ -73,6 +84,18 @@ export async function crmScreenshot(userId: string) {
 
 export async function crmLogout(userId: string) {
   return callService("/logout", { userId });
+}
+
+export async function crmCrawl(userId: string, crmUrl?: string) {
+  return callService("/crawl", { userId, crmUrl });
+}
+
+export async function crmDismissPopup(userId: string, preferAction: "accept" | "dismiss" = "accept") {
+  return callService("/popup-dismiss", { userId, preferAction });
+}
+
+export async function crmUploadFile(userId: string, selector: string, base64Content: string, filename: string) {
+  return callService("/upload", { userId, selector, base64Content, filename });
 }
 
 export async function crmHealth(): Promise<boolean> {

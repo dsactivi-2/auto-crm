@@ -8,6 +8,7 @@ import ActivityLog from "@/components/ActivityLog";
 import DashboardStats from "@/components/DashboardStats";
 import SystemLogViewer from "@/components/SystemLogViewer";
 import LicenseManager from "@/components/LicenseManager";
+import LicenseAdminManager from "@/components/LicenseAdminManager";
 import type { Profile } from "@/lib/types";
 
 export default function AdminPage() {
@@ -16,7 +17,7 @@ export default function AdminPage() {
   const [filterUser, setFilterUser] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [showCreateUser, setShowCreateUser] = useState(false);
-  const [activeTab, setActiveTab] = useState<"activities" | "logs" | "license">("activities");
+  const [activeTab, setActiveTab] = useState<"activities" | "logs" | "license" | "licenses">("activities");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserName, setNewUserName] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
@@ -196,7 +197,17 @@ export default function AdminPage() {
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            Lizenz
+            App-Lizenz
+          </button>
+          <button
+            onClick={() => setActiveTab("licenses")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              activeTab === "licenses"
+                ? "bg-white text-primary-700 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Kundenliz.
           </button>
         </div>
 
@@ -266,9 +277,13 @@ export default function AdminPage() {
               <SystemLogViewer />
             </div>
           </div>
-        ) : (
+        ) : activeTab === "license" ? (
           <div className="max-w-xl">
             <LicenseManager />
+          </div>
+        ) : (
+          <div className="card">
+            <LicenseAdminManager />
           </div>
         )}
       </div>
