@@ -37,6 +37,8 @@ export interface CrmCredentials {
   crm_username: string;
   crm_password_encrypted: string;
   crm_url: string;
+  anthropic_api_key_encrypted: string | null;
+  preferred_model: string | null;
   is_valid: boolean | null;
   last_validated_at: string | null;
   created_at: string;

@@ -69,6 +69,8 @@ create table public.crm_credentials (
   crm_username text not null,
   crm_password_encrypted text not null, -- AES-256 verschlüsselt
   crm_url text not null default 'https://crm.job-step.com',
+  anthropic_api_key_encrypted text, -- AES-256 verschlüsselter Anthropic API Key (optional)
+  preferred_model text not null default 'claude-haiku-4-5-20251001', -- Bevorzugtes Claude-Modell
   is_valid boolean default null, -- null = nicht geprüft, true/false nach Test
   last_validated_at timestamptz,
   created_at timestamptz not null default now(),

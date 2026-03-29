@@ -114,10 +114,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nachricht zu lang (max 5000 Zeichen)" }, { status: 400 });
     }
 
-    // CRM-Credentials laden für Auto-Login
+    // CRM-Credentials + Anthropic Key + Modell laden
     const { data: creds } = await supabase
       .from("crm_credentials")
-      .select("crm_username, crm_password_encrypted")
+      .select("crm_username, crm_password_encrypted, anthropic_api_key_encrypted, preferred_model")
       .eq("user_id", userId)
       .single();
 
@@ -137,12 +137,38 @@ export async function POST(request: NextRequest) {
     // Prüfe ob Playwright-Service erreichbar
     const playwrightAvailable = await pw.crmHealth();
 
-    // Anthropic API Call mit Tools
-    if (!process.env.ANTHROPIC_API_KEY) {
-      log.error("ANTHROPIC_API_KEY nicht konfiguriert");
-      return NextResponse.json({ error: "KI-Service nicht konfiguriert" }, { status: 503 });
+    // Anthropic API Key: User-eigener Key hat Vorrang, dann Fallback auf System-Key
+    let anthropicApiKey: string | undefined;
+
+    if (creds?.anthropic_api_key_encrypted) {
+      try {
+        anthropicApiKey = decrypt(creds.anthropic_api_key_encrypted);
+      } catch (err: unknown) {
+        log.warn("User Anthropic Key entschlüsseln fehlgeschlagen", {
+          userId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    if (!anthropicApiKey) {
+      anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    }
+
+    if (!anthropicApiKey) {
+      return NextResponse.json(
+        { error: "Kein API Key konfiguriert. Bitte Anthropic API Key in den Einstellungen hinterlegen." },
+        { status: 503 }
+      );
+    }
+
+    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+
+    // Modell: User-Wahl oder Fallback auf Sonnet
+    const allowedModels = ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-5-20251001"];
+    const selectedModel = (creds?.preferred_model && allowedModels.includes(creds.preferred_model))
+      ? creds.preferred_model
+      : "claude-haiku-4-5-20251001";
 
     let messages: Anthropic.MessageParam[] = [
       ...contextMessages,
@@ -156,7 +182,7 @@ export async function POST(request: NextRequest) {
     // Tool-Use Loop (max 5 Iterationen)
     for (let i = 0; i < 5; i++) {
       const completion = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: selectedModel,
         max_tokens: 2048,
         system: CRM_SYSTEM_PROMPT + (playwrightAvailable
           ? "\n\nDer CRM-Service ist AKTIV. Du kannst die Tools nutzen um echte CRM-Daten zu lesen."

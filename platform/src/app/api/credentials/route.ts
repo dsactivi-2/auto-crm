@@ -14,13 +14,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
     }
 
-    const { username, password, crmUrl } = await request.json();
+    const { username, password, crmUrl, anthropicApiKey, preferredModel } = await request.json();
 
     if (!username) {
       return NextResponse.json({ error: "Benutzername erforderlich" }, { status: 400 });
     }
 
+    // Anthropic Key Validierung (wenn angegeben)
+    if (anthropicApiKey && !anthropicApiKey.startsWith("sk-ant-")) {
+      return NextResponse.json({ error: "Ungültiger Anthropic API Key (muss mit sk-ant- beginnen)" }, { status: 400 });
+    }
+
     const encryptedPassword = password ? encrypt(password) : undefined;
+    const encryptedAnthropicKey = anthropicApiKey ? encrypt(anthropicApiKey) : undefined;
 
     // Upsert: Insert oder Update in einer atomischen Operation
     const upsertData: Record<string, unknown> = {
@@ -32,6 +38,19 @@ export async function POST(request: NextRequest) {
 
     if (encryptedPassword) {
       upsertData.crm_password_encrypted = encryptedPassword;
+    }
+
+    if (encryptedAnthropicKey) {
+      upsertData.anthropic_api_key_encrypted = encryptedAnthropicKey;
+    }
+
+    // Modell-Auswahl validieren und speichern
+    const allowedModels = ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-5-20251001"];
+    if (preferredModel) {
+      if (!allowedModels.includes(preferredModel)) {
+        return NextResponse.json({ error: "Ungültiges Modell" }, { status: 400 });
+      }
+      upsertData.preferred_model = preferredModel;
     }
 
     // Prüfe ob bereits Credentials existieren
