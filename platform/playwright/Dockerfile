@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Dependencies installieren
 COPY package.json ./
-RUN npm ci --production
+RUN npm install --omit=dev
 
 # App-Code kopieren
 COPY server.js crm-browser.js logger.js ./
