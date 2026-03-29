@@ -17,6 +17,6 @@ USER pwuser
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=15s \
-  CMD wget -q --spider http://localhost:3001/health || exit 1
+  CMD node -e "fetch('http://localhost:3001/health').then(r=>{if(!r.ok)throw r;process.exit(0)}).catch(()=>process.exit(1))"
 
 CMD ["node", "server.js"]
