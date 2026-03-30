@@ -44,7 +44,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-700">CRM Platform</h1>
+          <h1 className="text-3xl font-bold text-primary-700">Fate CRM Driver</h1>
           <p className="text-gray-500 mt-1">crm.job-step.com Automatisierung</p>
         </div>
 

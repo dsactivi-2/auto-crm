@@ -3,7 +3,7 @@ import Providers from "@/components/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CRM Platform — job-step.com",
+  title: "Fate CRM Driver — job-step.com",
   description: "CRM-Automatisierung mit KI-Chat",
 };
 
