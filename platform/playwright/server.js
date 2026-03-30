@@ -6,6 +6,7 @@
  *
  * Endpoints:
  *   GET  /health              — Health Check
+ *   GET  /modules             — Modul-Liste
  *   POST /login               — CRM-Login für User
  *   POST /validate            — Credentials testen
  *   POST /navigate            — Seite öffnen + Inhalt lesen
@@ -15,12 +16,15 @@
  *   POST /screenshot          — Screenshot machen
  *   POST /execute             — Generische CRM-Aktion
  *   POST /logout              — Session schließen
+ *   POST /popup-dismiss       — HTML-Dialoge schließen
+ *   POST /upload              — Datei hochladen (Base64)
+ *   POST /crawl               — Alle CRM-Module scannen
  */
 
 const http = require("http");
 const crm = require("./crm-browser");
 const { popupHandler } = require("./popup-handler");
-const { uploadBase64File, waitForDownload } = require("./file-upload-handler");
+const { uploadBase64File } = require("./file-upload-handler");
 const { createLogger } = require("./logger");
 
 const log = createLogger("playwright-server");
