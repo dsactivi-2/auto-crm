@@ -7,7 +7,7 @@ COPY package.json ./
 RUN npm install --omit=dev
 
 # App-Code kopieren
-COPY server.js crm-browser.js logger.js ./
+COPY server.js crm-browser.js logger.js popup-handler.js file-upload-handler.js ./
 
 # Data-Verzeichnis für Browser-Sessions
 RUN mkdir -p /app/data && chown -R pwuser:pwuser /app/data
